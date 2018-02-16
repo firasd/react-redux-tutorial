@@ -10,6 +10,7 @@
 
 use Time::HiRes qw(gettimeofday);
 use Mojolicious::Lite;
+use Mojo::File;
 use Mojo::JSON qw(encode_json decode_json);
 
 app->static->paths->[0] = './public';
@@ -18,7 +19,8 @@ any '/' => sub { $_[0]->reply->static('index.html') };
 
 any [qw(GET POST)] => '/api/comments' => sub {
   my $self = shift;
-  my $comments = decode_json (do { local(@ARGV,$/) = 'comments.json';<> });
+  my $path = Mojo::File->new("comments.json");
+  my $comments = decode_json $path->slurp;
   $self->res->headers->cache_control('no-cache');
   $self->res->headers->access_control_allow_origin('*');
 
@@ -29,8 +31,7 @@ any [qw(GET POST)] => '/api/comments' => sub {
       author => $self->param('author'),
       text   => $self->param('text'),
     };
-    open my $FILE, '>', 'comments.json';
-    print $FILE encode_json($comments);
+    $path->spurt(encode_json $comments);
   }
   $self->render(json => $comments);
 };
